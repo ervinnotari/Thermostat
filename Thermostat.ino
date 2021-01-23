@@ -8,6 +8,7 @@
 #include <StreamString.h>
 #include "Thermostat.h"
 #include "ThermostatIRCtrls.h"
+#include "ThermostatDisplay.h"
 
 #define DEBUG true
 #define HEARTBEAT_INTERVAL 300000 // 5 Minutes
@@ -50,6 +51,7 @@ WiFiManagerParameter sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
     sinricDeviceId("sinric_devId", "Sinric Device ID", "", 30);
 Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAF);
 ThermostatIRCtrls control(PIN_IR);
+ThermostatDisplay display(PIN_SCL, PIN_SDA);
 
 void setPowerStateOnServer(String deviceId, String value);
 void setSetTemperatureSettingOnServer(String deviceId, float setPoint, String scale, float ambientTemperature, float ambientHumidity);
@@ -73,6 +75,8 @@ void setup()
 #if DEBUG
   Serial.begin(115200);
 #endif
+
+  display.begin();
 
   EEPROM.begin(4096);
   EEPROM.get(eeAddr, data);
@@ -192,6 +196,7 @@ void loop()
   control.loop();
   webSocket.loop();
   termostato.runner(data.state, data.pointTemp, dht.readTemperature());
+  display.loop();
 }
 
 void saveConfigCallback()
