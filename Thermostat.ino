@@ -18,14 +18,14 @@
 #define WIFI_SSID "TermostatoAP"
 #define WIFI_PASS "123456789"
 
-#define PIN_FAN 16 //D0
-#define PIN_COOL 5 //D1
-#define PIN_HEAF 4 //D2
-#define LED_ON 0   //D3
-#define PIN_IR 2   //D4
-#define PIN_DHT 14 //D5
-#define PIN_BTN 12 //D6
-#define PIN_RST 13 //D7
+#define PIN_FAN D0
+#define PIN_COOL D1
+#define PIN_HEAF D2
+#define LED_ON D3
+#define PIN_IR D4
+#define PIN_DHT D5
+#define PIN_BTN D6
+#define PIN_RST D7
 #define PIN_SCL 10
 #define PIN_SDA 9
 
