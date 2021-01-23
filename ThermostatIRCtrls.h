@@ -12,7 +12,7 @@
 class ThermostatIRCtrls {
   public:
     enum TCMode: char { AUTO='4', COOL='2', DEHUMIFY='3', FAN='5', HEAT='1' };
-    enum TCSpeed: char { AUTO1='0', SPEED1='2', SPEED2='3', SPEED3='5', SPEED4='1' };
+    enum TCSpeed { AUTO1, SPEED1, SPEED2, SPEED3 };
     enum TCTab: long { OFF=0xC0, SWING=0x1A, TAB1=0x16, TAB2=0x12, TAB3=0x0E, TAB4=0x0A, TAB5=0x06 };
     enum TCTemp: long { 
       TEMP16=0x6C, TEMP17=0x6D, TEMP18=0x6E, TEMP19=0x6F, TEMP20=0x70, 
@@ -74,7 +74,6 @@ inline const String toString(ThermostatIRCtrls::TCSpeed v) {
     case ThermostatIRCtrls::SPEED1: return "SPEED1";
     case ThermostatIRCtrls::SPEED2: return "SPEED2";
     case ThermostatIRCtrls::SPEED3: return "SPEED3";
-    case ThermostatIRCtrls::SPEED4: return "SPEED4";
     default: return "[Unknown]";
   }
 };

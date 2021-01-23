@@ -24,12 +24,14 @@ void Thermostat::setOnTemperatureChange(std::function<float(float, float)> func)
 ThermostatState Thermostat::getState(){ return _state; }
 bool Thermostat::isHeat(){ return _state == ThermostatState::HEAT; }
 bool Thermostat::isCool(){ return _state == ThermostatState::COOL; }
+bool Thermostat::isFan(){ return _state == ThermostatState::FAN; }
 bool Thermostat::isOff(){ return _state == ThermostatState::OFF; }
 bool Thermostat::isStandby(){ return (isHeat() && _point <= _temperature) || (isCool() && _point >= _temperature); }
 
 ThermostatState Thermostat::strToState(String state){
   if(state == "heat"){ return HEAT; }
   else if(state == "cool"){ return COOL; }
+  else if(state == "fan"){ return FAN; }
   else return OFF;
 }
 
@@ -37,6 +39,7 @@ String Thermostat::stateToStr(ThermostatState state){
   switch(state){
     case HEAT: return "heat";
     case COOL: return "cool";
+    case FAN: return "fan";
     default: return "off";
   }
 }
@@ -79,6 +82,9 @@ void Thermostat::runner(ThermostatState state, float point, float temperature){
       digitalWrite(_pinCool, LOW);
     } else if (isHeat()) {
       digitalWrite(_pinHeat, LOW);
+      digitalWrite(_pinCool, HIGH);
+    } else {
+      digitalWrite(_pinHeat, HIGH);
       digitalWrite(_pinCool, HIGH);
     }
   }

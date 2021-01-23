@@ -69,7 +69,19 @@ ThermostatIRCtrls::TCMode ThermostatIRCtrls::getMode(const decode_results* const
 
 ThermostatIRCtrls::TCSpeed ThermostatIRCtrls::getSpeed(const decode_results* const results) {
   String state = uint64ToString(results->state[4], 16);
-  return (ThermostatIRCtrls::TCSpeed) state.c_str()[1];
+  switch(state.c_str()[1]){
+    case '0':
+    case '4': return AUTO1;
+    
+    case '6':
+    case '2': return SPEED1;
+    
+    case '7':
+    case '3': return SPEED2;
+    
+    case '5':
+    case '1': return SPEED3;
+  }  
 }
 
 ThermostatIRCtrls::TCTab ThermostatIRCtrls::getTab(const decode_results* const results) {

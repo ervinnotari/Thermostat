@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 
-enum ThermostatState { OFF, HEAT, COOL };
+enum ThermostatState { OFF, HEAT, COOL, FAN };
 
 class Thermostat {
   public:    
@@ -23,6 +23,7 @@ class Thermostat {
     bool isHeat();
     bool isCool();
     bool isOff();
+    bool isFan();
     bool isStandby();
     
     void runner(ThermostatState state, float point, float temperature);
