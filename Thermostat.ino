@@ -25,8 +25,6 @@
 #define PIN_DHT D5
 #define PIN_BTN D6
 #define PIN_RST D7
-#define PIN_SCL 10
-#define PIN_SDA 9
 
 uint64_t heartbeatTimestamp = 0, cloudLastUpdateTimestamp = 0, stum = 0, now;
 bool isPersist = false, isConnected = false, isWifiReseted = false;
@@ -73,7 +71,6 @@ void setup()
 #if DEBUG
   Serial.begin(115200);
 #endif
-
   EEPROM.begin(4096);
   EEPROM.get(eeAddr, data);
   eeAddr2 = eeAddr + sizeof(data);
@@ -127,8 +124,8 @@ void loop()
     if ((now - stum) > 3000)
     {
       isWifiReseted = true;
-      wifiManager.resetSettings();
-      webSocket.loop();
+      //wifiManager.resetSettings();
+      Serial.println("-> reset wifi!");
       for (int i = 0; i <= 10; i++)
       {
         if ((now % 500) <= 250)
