@@ -164,7 +164,7 @@ void loop()
   if (termostato.isOff()) 
   {
     digitalWrite(LED_ON, LOW);
-    ThermostatDisplay::display->clearDisplay();
+    display.display->clearDisplay();
   }
   else if (termostato.isStandby() && (now % 1000) <= 500)
     digitalWrite(LED_ON, LOW);
