@@ -47,7 +47,7 @@ struct
 DHT dht(PIN_DHT, DHTTYPE);
 WiFiManager wifiManager;
 WebSocketsClient webSocket;
-WiFiManagerParameter 
+WiFiManagerParameter
     sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
     sinricDeviceId("sinric_devId", "Sinric Device ID", "", 30);
 Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAF);
@@ -76,9 +76,7 @@ void setup()
 #if DEBUG
   Serial.begin(115200);
 #endif
-
   display.begin();
-
   EEPROM.begin(4096);
   EEPROM.get(eeAddr, data);
   eeAddr2 = eeAddr + sizeof(data);
@@ -89,10 +87,23 @@ void setup()
   wifiManager.addParameter(&sinricApiKey);
   wifiManager.addParameter(&sinricDeviceId);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+  if (WiFi.status() == WL_CONNECT_FAILED || WiFi.SSID().isEmpty())
+  {
+    display.setWifi(WIFI_SSID);
+    display.showApModeScreen();
+  }
+  else
+  {
+    display.setWifi(WiFi.SSID());
+    display.showLoaderScreen();
+  }
+
   wifiManager.autoConnect(WIFI_SSID, WIFI_PASS);
   wifiManager.setDebugOutput(DEBUG);
 
-  display.setWifi("Expert_Juraci");
+  display.setWifi(WiFi.SSID());
+  display.showLoaderScreen();
 
   webSocket.begin("iot.sinric.com", 80, "/");
   webSocket.onEvent(webSocketEvent);
@@ -127,6 +138,7 @@ void setup()
 void loop()
 {
   now = millis();
+  display.setWifi(WiFi.SSID());
 
   btnWifiReset = digitalRead(PIN_BTN);
   if (termostato.isOff() && !isWifiReseted && btnWifiReset == HIGH)
@@ -161,11 +173,9 @@ void loop()
 #endif
   }
 
-  if (termostato.isOff()) 
-  {
+  display.setEnable(!termostato.isOff());
+  if (termostato.isOff())
     digitalWrite(LED_ON, LOW);
-    display.display->clearDisplay();
-  }
   else if (termostato.isStandby() && (now % 1000) <= 500)
     digitalWrite(LED_ON, LOW);
   else

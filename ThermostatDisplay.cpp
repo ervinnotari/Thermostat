@@ -12,6 +12,16 @@ void ThermostatDisplay::setPoint(int point) { _point = point; }
 void ThermostatDisplay::setWifi(String wifi) { _wifi = wifi; }
 void ThermostatDisplay::setThermState(char st) { _state = st; }
 
+void ThermostatDisplay::setEnable(bool enable) { 
+  _enable = enable;
+  if(!_enable) {
+    display->clearDisplay();
+    display->setTextColor(SSD1306_WHITE);
+    display->setCursor(0,0);
+    display->display();
+  }
+}
+
 void ThermostatDisplay::begin() {
   Wire.begin(_pin_sda, _pin_scl);
   if(!display->begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
@@ -21,7 +31,34 @@ void ThermostatDisplay::begin() {
   display->clearDisplay();
 }
 
+void ThermostatDisplay::showLoaderScreen(){
+  display->clearDisplay();
+
+  display->setCursor(0,0);
+  display->setTextColor(SSD1306_WHITE);
+  display->setTextSize(1.25);
+  display->println("Conectado a");
+  display->println(_wifi);
+
+  display->display();
+}
+
+void ThermostatDisplay::showApModeScreen() {
+  if(!_enable) return;
+  display->clearDisplay();
+  
+  display->setCursor(0,0);
+  display->setTextColor(SSD1306_WHITE);
+  display->setTextSize(0.75);
+  display->println("Conectese a Wi-Fi:");
+  display->println(_wifi);
+  display->println("para configurar este dispositivo!");
+  
+  display->display();
+}
+
 void ThermostatDisplay::loop() {
+  if(!_enable) return;
   display->clearDisplay();
   display->setCursor(0,0);
   display->setTextColor(SSD1306_WHITE);
@@ -49,7 +86,7 @@ void ThermostatDisplay::loop() {
   display->setCursor(x,24);
   display->print(String(_humidity, 0));
   display->setTextSize(1);
-  display->print("% ");
+  display->print("%");
   
   display->display();
 }

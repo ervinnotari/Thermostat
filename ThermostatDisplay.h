@@ -21,12 +21,16 @@ class ThermostatDisplay {
     void setPoint(int point);
     void setWifi(String wifi);
     void setThermState(char st);
+    void showApModeScreen();
+    void showLoaderScreen();
+    void setEnable(bool enable);
     Adafruit_SSD1306* display;
   private:
     uint8_t _pin_sda, _pin_scl;
     float _temperature, _humidity, _point;
     String _wifi;
     char _state;
+    bool _enable = true;
 };
 
 #endif
