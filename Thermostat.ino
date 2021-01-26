@@ -19,15 +19,15 @@
 #define WIFI_PASS "123456789"
 
 #define PIN_FAN D0
-#define PIN_COOL D1
-#define PIN_HEAF D2
-#define LED_ON D3
-#define PIN_IR D4
-#define PIN_DHT D5
-#define PIN_BTN D6
-#define PIN_RST D7
-#define PIN_SCL 10
-#define PIN_SDA 9
+#define PIN_SDA D1
+#define PIN_SCL D2
+#define PIN_COOL D3
+#define PIN_HEAF D4
+#define LED_ON D5
+#define PIN_IR D6
+#define PIN_DHT D7
+#define PIN_BTN D8
+#define PIN_RST D9
 
 uint64_t heartbeatTimestamp = 0, cloudLastUpdateTimestamp = 0, stum = 0, now;
 bool isPersist = false, isConnected = false, isWifiReseted = false;
@@ -47,11 +47,12 @@ struct
 DHT dht(PIN_DHT, DHTTYPE);
 WiFiManager wifiManager;
 WebSocketsClient webSocket;
-WiFiManagerParameter sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
+WiFiManagerParameter 
+    sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
     sinricDeviceId("sinric_devId", "Sinric Device ID", "", 30);
 Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAF);
 ThermostatIRCtrls control(PIN_IR);
-ThermostatDisplay display(PIN_SCL, PIN_SDA);
+ThermostatDisplay display(PIN_SDA, PIN_SCL);
 
 void setPowerStateOnServer(String deviceId, String value);
 void setSetTemperatureSettingOnServer(String deviceId, float setPoint, String scale, float ambientTemperature, float ambientHumidity);
@@ -90,6 +91,8 @@ void setup()
   wifiManager.setSaveConfigCallback(saveConfigCallback);
   wifiManager.autoConnect(WIFI_SSID, WIFI_PASS);
   wifiManager.setDebugOutput(DEBUG);
+
+  display.setWifi("Expert_Juraci");
 
   webSocket.begin("iot.sinric.com", 80, "/");
   webSocket.onEvent(webSocketEvent);
@@ -158,8 +161,11 @@ void loop()
 #endif
   }
 
-  if (termostato.isOff())
+  if (termostato.isOff()) 
+  {
     digitalWrite(LED_ON, LOW);
+    ThermostatDisplay::display->clearDisplay();
+  }
   else if (termostato.isStandby() && (now % 1000) <= 500)
     digitalWrite(LED_ON, LOW);
   else
@@ -229,6 +235,7 @@ float onChangePoint(float oldP, float newP)
 #endif
   isPersist = true;
   data.pointTemp = newP;
+  display.setPoint(data.pointTemp);
   return newP;
 }
 
@@ -236,11 +243,14 @@ float onChangeTemp(float oldTmp, float newTmp)
 {
   if (((int)oldTmp) == ((int)newTmp))
     return oldTmp;
+  int hum = dht.readHumidity();
   if (isConnected && (now - cloudLastUpdateTimestamp) > CLOUD_UPDATE)
   {
-    setSetTemperatureSettingOnServer(sinric.deviceId, data.pointTemp, DEFAULT_SCALE, newTmp, dht.readHumidity());
+    setSetTemperatureSettingOnServer(sinric.deviceId, data.pointTemp, DEFAULT_SCALE, newTmp, hum);
     cloudLastUpdateTimestamp = now;
   }
+  display.setTemperature(newTmp);
+  display.setHumidity(hum);
 #if DEBUG
   Serial.printf("-> Temperature change: %f -> %f\n", oldTmp, newTmp);
 #endif
