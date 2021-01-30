@@ -9,28 +9,31 @@
 #include "Thermostat.h"
 #include "ThermostatIRCtrls.h"
 #include "ThermostatDisplay.h"
+#include "ButtonEvent.h"
 
 #define DEBUG true
+
 #define HEARTBEAT_INTERVAL 300000 // 5 Minutes
 #define CLOUD_UPDATE 60000        // 1 Minutes
+#define FLASH_STUM 3000           // 3 Secunds
+
 #define DEFAULT_SCALE "CELSIUS"
 #define DHTTYPE DHT11
 #define WIFI_SSID "TermostatoAP"
 #define WIFI_PASS "123456789"
 
 #define PIN_FAN D0
-#define PIN_COOL D1
-#define PIN_HEAF D2
-#define LED_ON D3
-#define PIN_IR D4
-#define PIN_DHT D5
-#define PIN_BTN D6
-#define PIN_RST D7
-#define PIN_SCL 10
-#define PIN_SDA 9
+#define PIN_SDA D1
+#define PIN_SCL D2
+#define PIN_BTN D3
+#define PIN_LED D4
+#define PIN_HEAF D5
+#define PIN_COOL D6
+#define PIN_IR D7
+#define PIN_DHT D9
 
-uint64_t heartbeatTimestamp = 0, cloudLastUpdateTimestamp = 0, stum = 0, now;
-bool isPersist = false, isConnected = false, isWifiReseted = false;
+uint64_t heartbeatST = 0, cloudLastUpdateST = 0, flashStumST = 0, now;
+bool isPersist = false, isConnected = false;
 uint eeAddr = 500, eeAddr2 = 500;
 int btnWifiReset = 0, debugRead = 99999;
 
@@ -47,11 +50,12 @@ struct
 DHT dht(PIN_DHT, DHTTYPE);
 WiFiManager wifiManager;
 WebSocketsClient webSocket;
-WiFiManagerParameter sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
+WiFiManagerParameter
+    sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
     sinricDeviceId("sinric_devId", "Sinric Device ID", "", 30);
 Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAF);
 ThermostatIRCtrls control(PIN_IR);
-ThermostatDisplay display(PIN_SCL, PIN_SDA);
+ThermostatDisplay display(PIN_SDA, PIN_SCL);
 
 void setPowerStateOnServer(String deviceId, String value);
 void setSetTemperatureSettingOnServer(String deviceId, float setPoint, String scale, float ambientTemperature, float ambientHumidity);
@@ -60,24 +64,22 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length);
 void onChange(ThermostatIRCtrls::TCSpeed speed, ThermostatIRCtrls::TCTab tab, ThermostatIRCtrls::TCMode mode, int temp);
 float onChangeTemp(float oldTmp, float newTmp);
 float onChangePoint(float oldP, float newP);
+void onStum(ButtonInformation *sender);
 ThermostatState onChangeStatus(ThermostatState oldST, ThermostatState newST);
 void saveConfigCallback();
 
 void setup()
 {
-  isWifiReseted = true;
-  pinMode(LED_ON, OUTPUT);
-  digitalWrite(LED_ON, HIGH);
-  pinMode(PIN_BTN, INPUT);
-  digitalWrite(PIN_RST, HIGH);
-  pinMode(PIN_RST, OUTPUT);
+  ButtonEvent.addButton(PIN_BTN);
+  ButtonEvent.setStumEvent(PIN_BTN, onStum);
+
+  pinMode(PIN_LED, OUTPUT);
+  digitalWrite(PIN_LED, HIGH);
 
 #if DEBUG
   Serial.begin(115200);
 #endif
-
   display.begin();
-
   EEPROM.begin(4096);
   EEPROM.get(eeAddr, data);
   eeAddr2 = eeAddr + sizeof(data);
@@ -88,8 +90,23 @@ void setup()
   wifiManager.addParameter(&sinricApiKey);
   wifiManager.addParameter(&sinricDeviceId);
   wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+  if (WiFi.status() == WL_CONNECT_FAILED || WiFi.SSID().isEmpty())
+  {
+    display.setWifi(WIFI_SSID);
+    display.showApModeScreen();
+  }
+  else
+  {
+    display.setWifi(WiFi.SSID());
+    display.showLoaderScreen();
+  }
+
   wifiManager.autoConnect(WIFI_SSID, WIFI_PASS);
   wifiManager.setDebugOutput(DEBUG);
+
+  display.setWifi(WiFi.SSID());
+  display.showLoaderScreen();
 
   webSocket.begin("iot.sinric.com", 80, "/");
   webSocket.onEvent(webSocketEvent);
@@ -116,37 +133,15 @@ void setup()
     data.pointTemp = 20;
     EEPROM.put(eeAddr, data);
   }
-
-  digitalWrite(LED_ON, LOW);
-  isWifiReseted = false;
+  digitalWrite(PIN_LED, LOW);
 }
 
 void loop()
 {
   now = millis();
 
-  btnWifiReset = digitalRead(PIN_BTN);
-  if (termostato.isOff() && !isWifiReseted && btnWifiReset == HIGH)
-  {
-    if ((now - stum) > 3000)
-    {
-      isWifiReseted = true;
-      wifiManager.resetSettings();
-      webSocket.loop();
-      for (int i = 0; i <= 10; i++)
-      {
-        if ((now % 500) <= 250)
-          digitalWrite(LED_ON, LOW);
-        else
-          digitalWrite(LED_ON, HIGH);
-        delay(500);
-      }
-      delay(500);
-      digitalWrite(PIN_RST, LOW);
-    }
-  }
-  else
-    stum = now;
+  display.setWifi(WiFi.SSID());
+  display.setEnable(!termostato.isOff());
 
   if (isPersist)
   {
@@ -159,11 +154,11 @@ void loop()
   }
 
   if (termostato.isOff())
-    digitalWrite(LED_ON, LOW);
+    digitalWrite(PIN_LED, LOW);
   else if (termostato.isStandby() && (now % 1000) <= 500)
-    digitalWrite(LED_ON, LOW);
+    digitalWrite(PIN_LED, LOW);
   else
-    digitalWrite(LED_ON, HIGH);
+    digitalWrite(PIN_LED, HIGH);
 
 #if DEBUG
   if (Serial.available() > 0)
@@ -197,6 +192,7 @@ void loop()
   webSocket.loop();
   termostato.runner(data.state, data.pointTemp, dht.readTemperature());
   display.loop();
+  ButtonEvent.loop();
 }
 
 void saveConfigCallback()
@@ -205,6 +201,25 @@ void saveConfigCallback()
   strcpy(sinric.deviceId, sinricDeviceId.getValue());
   EEPROM.put(eeAddr2, sinric);
   isPersist = true;
+}
+
+void onStum(ButtonInformation *sender)
+{
+#if DEBUG
+  Serial.println("-> Flash Stuned");
+#endif
+  if (termostato.isOff() && !WiFi.SSID().isEmpty())
+  {
+    for (size_t i = 0; i < 10; i++)
+    {
+      digitalWrite(PIN_LED, (i % 2) ? HIGH : LOW);
+      delay(500);
+    }
+    wifiManager.resetSettings();
+#if DEBUG
+    Serial.println("-> Wifi reset");
+#endif
+  }
 }
 
 ThermostatState onChangeStatus(ThermostatState oldST, ThermostatState newST)
@@ -229,6 +244,7 @@ float onChangePoint(float oldP, float newP)
 #endif
   isPersist = true;
   data.pointTemp = newP;
+  display.setPoint(data.pointTemp);
   return newP;
 }
 
@@ -236,11 +252,14 @@ float onChangeTemp(float oldTmp, float newTmp)
 {
   if (((int)oldTmp) == ((int)newTmp))
     return oldTmp;
-  if (isConnected && (now - cloudLastUpdateTimestamp) > CLOUD_UPDATE)
+  int hum = dht.readHumidity();
+  if (isConnected && (now - cloudLastUpdateST) > CLOUD_UPDATE)
   {
-    setSetTemperatureSettingOnServer(sinric.deviceId, data.pointTemp, DEFAULT_SCALE, newTmp, dht.readHumidity());
-    cloudLastUpdateTimestamp = now;
+    setSetTemperatureSettingOnServer(sinric.deviceId, data.pointTemp, DEFAULT_SCALE, newTmp, hum);
+    cloudLastUpdateST = now;
   }
+  display.setTemperature(newTmp);
+  display.setHumidity(hum);
 #if DEBUG
   Serial.printf("-> Temperature change: %f -> %f\n", oldTmp, newTmp);
 #endif
