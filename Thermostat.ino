@@ -27,8 +27,8 @@
 #define PIN_SCL D2
 #define PIN_BTN D3
 #define PIN_LED D4
-#define PIN_HEAF D5
-#define PIN_COOL D6
+#define PIN_COOL D5
+#define PIN_HEAT D6
 #define PIN_IR D7
 #define PIN_DHT D9
 
@@ -53,7 +53,7 @@ WebSocketsClient webSocket;
 WiFiManagerParameter
     sinricApiKey("sinric_apiKey", "Sinric Api Key", "", 50),
     sinricDeviceId("sinric_devId", "Sinric Device ID", "", 30);
-Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAF);
+Thermostat termostato(PIN_FAN, PIN_COOL, PIN_HEAT);
 ThermostatIRCtrls control(PIN_IR);
 ThermostatDisplay display(PIN_SDA, PIN_SCL);
 
@@ -232,6 +232,7 @@ ThermostatState onChangeStatus(ThermostatState oldST, ThermostatState newST)
 #endif
   isPersist = true;
   data.state = newST;
+  display.setThermState(newST);
   return newST;
 }
 
