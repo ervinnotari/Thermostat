@@ -84,16 +84,16 @@ void ThermostatDisplay::loop()
   switch (_state)
   {
   case COOL:
-    ty = "cool";
+    ty = " CL ";
   case HEAT:
     display->print(String(_point, 0));
     display->setTextSize(1.25);
     display->print((char)247);
     display->println("C");
-    display->setCursor(40, 24);
+    display->setCursor(38, 24);
     display->setTextSize(0.5);
     display->setTextColor(SSD1306_BLACK, SSD1306_WHITE);
-    display->println(ty.isEmpty() ? "heat" : ty);
+    display->println(ty.isEmpty() ? " HT " : ty);
     break;
   case FAN:
     display->print("FAN");
@@ -102,6 +102,7 @@ void ThermostatDisplay::loop()
     break;
   }
 
+  display->setTextColor(SSD1306_WHITE);
   int x = 70;
   display->setTextSize(1);
   display->setCursor(x, 13);
